@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  ~
+  ~      Copyright (c) 2018-2025, lengleng All rights reserved.
+  ~
+  ~  Redistribution and use in source and binary forms, with or without
+  ~  modification, are permitted provided that the following conditions are met:
+  ~
+  ~ Redistributions of source code must retain the above copyright notice,
+  ~  this list of conditions and the following disclaimer.
+  ~  Redistributions in binary form must reproduce the above copyright
+  ~  notice, this list of conditions and the following disclaimer in the
+  ~  documentation and/or other materials provided with the distribution.
+  ~  Neither the name of the pig4cloud.com developer nor the names of its
+  ~  contributors may be used to endorse or promote products derived from
+  ~  this software without specific prior written permission.
+  ~  Author: lengleng (wangiegie@gmail.com)
+  ~
+  -->
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.pig4cloud.pigx.demo.mapper.CustomerMapper">
+
+	<resultMap id="customerEntityMap" type="com.pig4cloud.pigx.demo.entity.Customer">
+		<id property="id" column="id"/>
+		<result property="cName" column="c_name"/>
+		<result property="cAge" column="c_age"/>
+		<result property="cSex" column="c_sex"/>
+		<result property="cPhone" column="c_phone"/>
+		<result property="address" column="address"/>
+		<result property="dealerId" column="dealer_id"/>
+		<result property="prorityIds" column="prority_ids"/>
+		<result property="oppenid" column="oppenid"/>
+		<result property="createTime" column="create_time"/>
+	</resultMap>
+	<resultMap id="customerVoMap" type="com.pig4cloud.pigx.demo.vo.CustomerVo">
+		<id property="id" column="id"/>
+		<result property="cName" column="c_name"/>
+		<result property="cAge" column="c_age"/>
+		<result property="cSex" column="c_sex"/>
+		<result property="cPhone" column="c_phone"/>
+		<result property="address" column="address"/>
+		<result property="dealerId" column="dealer_id"/>
+		<result property="oppenid" column="oppenid"/>
+		<result property="createTime" column="create_time"/>
+		<!--视图对象扩展属性-->
+		<result property="dealerName" column="dealerName"/>
+		<result property="prorityNames" column="prorityNames"/>
+	</resultMap>
+	<select id="findCustomerListByPage" resultMap="customerVoMap">
+		SELECT
+		c.id,
+		c_name,
+		c_age,
+		c_phone,
+		c.create_time,
+		c.address,
+		c.oppenid,
+		c.dealer_id,
+		( CASE c.c_sex WHEN 0 THEN '男' WHEN 1 THEN '女' ELSE '不详' END ) c_sex,
+		su.`name` AS dealerName,
+		( SELECT GROUP_CONCAT( NAME SEPARATOR ',' ) FROM sys_user sut where sut.user_id IN ( c.prority_ids )) AS
+		prorityNames
+		FROM
+		t_customer c
+		LEFT JOIN sys_user su ON c.dealer_id = su.user_id
+		<where>
+			1=1
+			<if test="customer.cName != null and customer.cName != ''">
+				AND c.c_name LIKE CONCAT('%',#{customer.cName},'%')
+			</if>
+			<if test="customer.cPhone != null and customer.cPhone != ''">
+				AND c.c_phone = #{customer.cPhone}
+			</if>
+			<if test="customer.dealerName != null and customer.dealerName != ''">
+				AND su.name LIKE CONCAT('%',#{customer.dealerName},'%')
+			</if>
+			<if test="customer.startTime != null and customer.startTime != ''">
+				AND c.create_time > #{customer.startTime}
+			</if>
+			<if test="customer.endTime != null and customer.endTime != ''">
+				<![CDATA[ AND c.create_time < #{customer.endTime} ]]>
+			</if>
+		</where>
+		ORDER BY c.create_time DESC
+	</select>
+
+</mapper>
