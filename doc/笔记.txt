@@ -1,0 +1,187 @@
+ 
+#######CompleteTable Future
+                                                   通常用join()方法获取计算结果
+
+1.组合两个异步任务 ----thenAcceptBoth  与  runAfterBoth  纯消费fn无返回值
+       thenAcceptBoth以及相关方法提供了类似的功能，当两个CompletionStage都正常完成计算的时候，就会执行提供的action，它用来组合另外一个异步的结果。
+       runAfterBoth是当两个CompletionStage都正常完成计算的时候,执行一个Runnable，这个Runnable并不使用计算的结果。
+   例子：
+       public static void main(String[] args) {
+        CompletableFuture<Void> f =  CompletableFuture.supplyAsync(() -> 100)
+                // 第二个消费者：x,y显然是可以把前面几个的结果都拿到，然后再做处理
+                .thenAcceptBoth(CompletableFuture.completedFuture(10), (x, y) -> System.out.println(x * y)); //1000
+        System.out.println(f.join()); //null
+    }
+
+2.thenCombine、thenCompose整合两个计算结果  fn有返回值
+     先说：thenCompose
+     这一组方法接受一个Function作为参数，这个Function的输入是当前的CompletableFuture的计算值，返回结果将是一个新的CompletableFuture，
+     这个新的CompletableFuture会组合原来的CompletableFuture和函数返回的CompletableFuture。
+     而下面的一组方法thenCombine用来复合另外一个CompletionStage的结果。它的功能类似：
+     两个CompletionStage是并行执行的，它们之间并没有先后依赖顺序，other并不会等待先前的CompletableFuture执行完毕后再执行。
+例子：
+ public static void main(String[] args) {
+        CompletableFuture<Integer> future = CompletableFuture.supplyAsync(() -> 100);
+        CompletableFuture<String> future2 = CompletableFuture.supplyAsync(() -> "abc");
+        CompletableFuture<String> f = future.thenCombine(future2, (x, y) -> y + "-" + x);
+        System.out.println(f.join()); //abc-100
+    }
+
+3.辅助方法 allOf 和 anyOf  组合多个
+    allOf方法是当所有的CompletableFuture都执行完后执行计算。
+    anyOf方法是当任意一个CompletableFuture执行完后就会执行计算，计算的结果返回
+  例子：
+      public static void main(String[] args) {
+        Random rand = new Random();
+        CompletableFuture<Integer> future1 = CompletableFuture.supplyAsync(() -> {
+            try {
+                Thread.sleep(10000 + rand.nextInt(1000));
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            return 100;
+        });
+        CompletableFuture<String> future2 = CompletableFuture.supplyAsync(() -> {
+            try {
+                Thread.sleep(10000 + rand.nextInt(1000));
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            return "abc";
+        });
+        //CompletableFuture<Void> f =  CompletableFuture.allOf(future1,future2);
+        CompletableFuture<Object> f = CompletableFuture.anyOf(future1, future2);
+        System.out.println(f.join());
+    }
+
+4. 同步、异步回调 
+     同步回应，如 thenRun(action), whenComplete(action)，thenAccep（有参数）
+     异步回应，如 thenRunAsync(action[, executor]), whenCompleteAsync(action[, executor]),thenApplyAsync（有参数） 异步方法可以传入线程池，否则用默认的。
+ 例子：
+      CompletionStage<Void> futurePrice = CompletableFuture.runAsync(() -> {
+                sleep(1000);
+                System.out.println("test1:1 - runAsync(runnable), job thread: " + Thread.currentThread());
+            }
+        );
+ System.out.println("test1:flag1");
+ 
+        futurePrice.thenRun(() -> {
+            System.out.println("test1:2 - thenRun(runnable)), action thread: " + Thread.currentThread());
+        });
+ 
+        System.out.println("test1:flag2");
+ 
+        futurePrice.thenRunAsync(() -> {
+            System.out.println("test1:3 - thenRunAsync(runnable), action thread: " + Thread.currentThread());
+        });
+
+     单独的例子：
+       CompletableFuture.supplyAsync(() -> 100)
+                .thenApplyAsync(i -> i * 10)
+                .thenApply(i -> i.toString())
+                .whenComplete((r, e) -> System.out.println(r + "_____" + e)); //1000_____null
+ 
+5.组合多个时，将每一个的结果组合成一个List返回
+  例子：
+   1）工具方法
+public static <T> CompletableFuture<List<T>> sequence(List<CompletableFuture<T>> futures) {
+        //通过allOf方法把所有的futures放到一起  返回Void
+        CompletableFuture<Void> allDoneFuture = CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]));
+        //遍历把每一个futures通过join方法把结果拿到  最终给返回出去 并且是用CompletableFuture包装着的
+        return allDoneFuture.thenApply(v -> futures.stream().map(CompletableFuture::join).collect(Collectors.<T>toList()));
+    }
+   2）组合返回
+          public static void main(String[] args) {
+        CompletableFuture<Integer> future1 = CompletableFuture.supplyAsync(() -> {
+            try {
+                Thread.sleep(3000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            return 100;
+        });
+        CompletableFuture<Integer> future2 = CompletableFuture.supplyAsync(() -> {
+            try {
+                Thread.sleep(3000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            return 200;
+        });
+        CompletableFuture<List<Integer>> resultList = sequence(Arrays.asList(future1, future2));
+
+        System.out.println(resultList.join()); //[100, 200]
+    }
+
+6.Either：任意一个计算完了就可以执行
+     acceptEither方法是当任意一个CompletionStage完成的时候，action这个消费者就会被执行。这个方法返回CompletableFuture
+     applyToEither方法是当任意一个CompletionStage完成的时候，fn会被执行，它的返回值会当作新的CompletableFuture的计算结果。
+   例子：
+        public static void main(String[] args) {
+        Random rand = new Random();
+        CompletableFuture<Integer> future = CompletableFuture.supplyAsync(() -> {
+            try {
+                Thread.sleep(1000 + rand.nextInt(1000));
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            return 100;
+        });
+        CompletableFuture<Integer> future2 = CompletableFuture.supplyAsync(() -> {
+            try {
+                Thread.sleep(1000 + rand.nextInt(1000));
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            return 200;
+        });
+        CompletableFuture<String> f = future.applyToEither(future2, i -> i.toString());
+        System.out.println(f.join()); //有时候输出100  有时候输出200
+    }
+
+###### synchronized 对象级别锁
+
+1) Java中每一个对象都可以作为锁，这是synchronized实现同步的基础：
+  1. 普通同步方法（实例方法），锁是当前实例对象 ，进入同步代码前要获得当前实例的锁
+  2. 静态同步方法，锁是当前类的class对象 ，进入同步代码前要获得当前类对象的锁
+  3. 同步方法块，锁是括号里面的对象，对给定对象加锁，进入同步代码库前要获得给定对象的锁。
+2) 一个线程获取了该对象的锁之后，其他线程无法获取该对象的锁，就不能访问该对象的其他synchronized实例方法，但是可以访问非synchronized修饰的方法
+
+
+###### 高性能延时队列
+
+实现订单30分钟后自动失效、24小时候自动评价......
+1)基于Redis Zset 实现
+Redis由于其自身的Zset数据结构，也同样可以实现延时的操作。
+Zset本质就是Set结构上加了个排序的功能，除了添加数据value之外，还提供另一属性score，这一属性在添加元素时候可以指定，每次指定score后，Zset会自动重新按新的值调整顺序。
+如果score代表的是想要执行时间的时间戳，在某个时间将它插入Zset集合中，它会按照时间戳大小进行排序，也就是对执行时间前后进行排序。
+不断地进行取第一个key值，如果当前时间戳大于等于该key值的socre就将它取出来进行消费删除，就可以达到延时执行的目的。注意不需要遍历整个Zset集合，以免造成性能浪费。
+遍历逻辑，删除逻辑，注意使用 Redis Lua 封装，确保原子性操作。更要注意 Redis Lua 在 Redis Cluster 的伪集群问题。
+若是JAVA 语言可以直接使用 redisson，封装了 DelayedQueue 的实现。
+2）Beanstalkd 消息队列  使用：https://blog.csdn.net/weixin_41282397/article/details/88841346
+Beanstalkd，一个高性能、轻量级的分布式内存队列系统。支持过有9.5 million用户的Facebook Causes应用。后来开源，现在有PostRank大规模部署和使用，每天处理百万级任务。
+数据库，利用定时任务轮询实现，业务量大性能瓶颈。
+延时队列的其他实现，比如 rabbitmq 利用ttl特性可以实现。无法取消已放入队列里面的数据，使用时特别注意死信队列的配置等。
+还可以自己根据 时间轮片的算法 自行实现 。
+总之一切，都要有补偿的逻辑，无论是业务人员手动触发还是自动补偿。
+
+
+###### 多线程
+  每一个线程开启都会分配一个缓存   操作共享数据就是把主内存的变量值复制到缓存中操作后再写回去就会造成其他线程读到错误数据
+1. volatile 保证内存可见性（及时更新驻村主存  可看成在主存中更新）  不能保证数据的原子性 （i++可看成读-改-写三个步骤） 禁止指令重排序
+2. CAS（Compare-And-Swap）算法 是硬件对于并发操作的支持，可以保证原子性。 三步：内存值、预估值、更新值   不会阻塞   底层：自旋锁、unsafe类
+    例如 ： AutomicInteger、AutomicLong等  调用 getAndIncrement实现 i++ ;
+    靠的是Unsafe类的CPU指令原语保证原子性
+    缺点 ： 1.循环时间长，开销大  2.只能保证一个共享变量的原子操作。 3.ABA问题 ： 解决用AtomicStampReference(引用+版本控制   不仅对比值还要对比当前版本)
+3.ConcurrentHashMap 同步容器，采用锁分段机制分成了16段，降低了锁的粒度
+4.单例模式多线程下安全  ：  DCL（双端检锁机制）+volatile 禁止指令重排 （分配内存地址、初始化对象、对象指向内存地址）
+5.ArryList多线程下不安全 解决 ： 1.Vector  2.Collections.sysconizedList(new ArryList())  3.new CopyOnWriteArrayList();
+6.HashSet多线程下不安全 解决 ：1.Collections.sysconizedSet(new HashSet())  2.new CopyOnWriteHashSet();  HashSet底层其实是HashMap 只不过value是一个固定的对象
+7.HashMap多线程下不安全 解决 ：1.new ConcurrentHashMap()  2.Collections.sysconizedMap(new HashMap())   
+
+
+
+
+
+
+

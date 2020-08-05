@@ -22,6 +22,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.baomidou.mybatisplus.extension.toolkit.SqlHelper;
 import com.codingapi.tx.annotation.TxTransaction;
 import com.pig4cloud.pigx.admin.api.dto.UserDTO;
+import com.pig4cloud.pigx.admin.api.feign.RemoteDeptService;
 import com.pig4cloud.pigx.admin.api.feign.RemoteUserService;
 import com.pig4cloud.pigx.admin.api.vo.UserVO;
 import com.pig4cloud.pigx.common.core.constant.SecurityConstants;
@@ -56,6 +57,8 @@ public class StaffServiceImpl extends ServiceImpl<StaffMapper, Staff> implements
 
 	private final RemoteUserService remoteUserService;
 
+	private final RemoteDeptService remoteDeptService;
+
 	@Override
 	@TxTransaction(isStart = true)
 	@Transactional(rollbackFor = Exception.class)
@@ -87,7 +90,7 @@ public class StaffServiceImpl extends ServiceImpl<StaffMapper, Staff> implements
 		String deptIdss = deptIds.toString().substring(0, deptIds.toString().length() - 1);
 		String userIdss = userIds.toString().substring(0, userIds.toString().length() - 1);
 		List<Object> userNames = remoteUserService.userNames(userIdss, SecurityConstants.FROM_IN);
-		List<Object> deptNames = remoteUserService.deptNames(deptIdss);
+		List<Object> deptNames = remoteDeptService.deptNames(deptIdss);
 		page.setRecords(staffList);
 		return page;
 	}
