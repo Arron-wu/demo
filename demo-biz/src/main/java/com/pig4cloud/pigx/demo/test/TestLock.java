@@ -10,6 +10,8 @@
  */
 package com.pig4cloud.pigx.demo.test;
 
+import com.pig4cloud.pigx.demo.enums.StaffType;
+
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 

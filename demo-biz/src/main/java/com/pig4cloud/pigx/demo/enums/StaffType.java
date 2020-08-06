@@ -1,8 +1,18 @@
 package com.pig4cloud.pigx.demo.enums;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+import javax.tools.Tool;
+import java.util.Arrays;
+
 /**
  * @author qinglong.wu
  */
+@Getter
+@NoArgsConstructor
+@AllArgsConstructor
 public enum StaffType {
 
 	/**
@@ -26,24 +36,21 @@ public enum StaffType {
 	 */
 	private String text;
 
-	StaffType(Integer id, String text) {
-		this.id = id;
-		this.text = text;
+	/**
+	 * 根据id返回对应的text
+	 * @param id
+	 * @return
+	 */
+	public static String getText(Integer id){
+		if (id!=null){
+			StaffType[] staffTypes = StaffType.values();
+			for (StaffType staffType: staffTypes) {
+				if (id == staffType.getId()) {
+					return staffType.getText();
+				}
+			}
+		}
+		return null;
 	}
 
-	public Integer getId() {
-		return id;
-	}
-
-	public void setId(Integer id) {
-		this.id = id;
-	}
-
-	public String getText() {
-		return text;
-	}
-
-	public void setText(String text) {
-		this.text = text;
-	}
 }

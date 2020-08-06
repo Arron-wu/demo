@@ -10,6 +10,7 @@
  */
 package com.pig4cloud.pigx.demo.test;
 
+import com.pig4cloud.pigx.demo.enums.StaffType;
 import com.pig4cloud.pigx.demo.utils.ThreadPoolUtil;
 
 import java.util.ArrayList;
@@ -66,7 +67,6 @@ public class TestCAS {
 			}
 		}
 		System.out.println("==================");
-		//list.forEach(System.out::println);
 		for (Future<Integer> f: list) {
 			try {
 				System.out.print(f.get());
