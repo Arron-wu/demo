@@ -44,6 +44,8 @@ public class TestJgroup {
         PrintStream ps = new PrintStream(new FileOutputStream(file));
         ps.println(document.toString());// 往文件里写入字符串
 //            ps.append("http://www.jb51.net");// 在已有的基础上添加字符串
+			ps.flush();
+			ps.close();
     } catch (IOException e) {
         e.printStackTrace();
     }

@@ -26,12 +26,13 @@ public class TestZX {
 	public  void lock(){
 		System.out.println(Thread.currentThread().getName()+" come in");
 			while (!atomicInteger.compareAndSet(1,2)){
-				System.out.println("当前等待线程 : "+ Thread.currentThread().getName());
+				System.out.println(Thread.currentThread().getName()+"等待...");
 			}
+		System.out.println(Thread.currentThread().getName()+" 线程使用中.....");
 	}
 
 	public void unLock(){
-		System.out.println(Thread.currentThread().getName()+" set value : " + atomicInteger.get());
+		System.out.println(Thread.currentThread().getName()+" 线程使用完毕");
 		atomicInteger.compareAndSet(2,1);
 	}
 
@@ -41,7 +42,7 @@ public class TestZX {
 			@Override
 			public void run() {
 				testZX.lock();
-				try { TimeUnit.SECONDS.sleep(3);} catch (InterruptedException e) { e.printStackTrace();}
+				try { TimeUnit.SECONDS.sleep(2);} catch (InterruptedException e) { e.printStackTrace();}
 				testZX.unLock();
 			}
 		},"A").start();
@@ -50,6 +51,7 @@ public class TestZX {
 			@Override
 			public void run() {
 				testZX.lock();
+				try { TimeUnit.SECONDS.sleep(1);} catch (InterruptedException e) { e.printStackTrace();}
 				testZX.unLock();
 			}
 		},"B").start();
